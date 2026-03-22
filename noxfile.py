@@ -22,9 +22,9 @@ DIR = Path(__file__).parent.resolve()
 @session(uv_groups=["lint"], reuse_venv=True, default=True)
 def lint(s: nox.Session, /) -> None:
     """Run the linter."""
-    s.notify("precommit")
-    s.notify("pylint")
-    s.notify("mypy")
+    s.run("precommit")
+    s.run("pylint")
+    s.run("mypy")
 
 
 @session(uv_groups=["lint"], reuse_venv=True)
@@ -49,16 +49,25 @@ def mypy(s: nox.Session, /) -> None:
 # Testing
 
 
-@session(uv_groups=["test"], reuse_venv=True, default=True)
+@session(python=False, default=True)
 def test(s: nox.Session, /) -> None:
     """Run the unit and regular tests."""
     s.notify("pytest", posargs=s.posargs)
+    s.notify("pytest_gremlins", posargs=s.posargs)
 
 
-@session(uv_groups=["test"], reuse_venv=True)
+@session(uv_groups=["test_cov"], reuse_venv=True)
 def pytest(s: nox.Session, /) -> None:
     """Run the unit and regular tests."""
     s.run("pytest", *s.posargs)
+
+
+@session(uv_groups=["test_mutation"], reuse_venv=True)
+def pytest_gremlins(s: nox.Session, /) -> None:
+    """Run pytest-gremlins (without coverage, which conflicts with gremlins)."""
+    # Filter out --cov from posargs since it conflicts with gremlins
+    filtered_args = [arg for arg in s.posargs if not arg.startswith("--cov")]
+    s.run("pytest", "--gremlins", "tests", *filtered_args)
 
 
 # =============================================================================
